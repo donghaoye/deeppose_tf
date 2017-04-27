@@ -39,12 +39,38 @@ def save_joints():
 
     fp = open(joint_data_fn, 'w')
 
-    for i, (anno, train_flag) in enumerate(
+    #print(mat['RELEASE'])
+
+    for i, (anno, train_flag, act) in enumerate(
         izip(mat['RELEASE']['annolist'][0, 0][0],
-            mat['RELEASE']['img_train'][0, 0][0])):
+             mat['RELEASE']['img_train'][0, 0][0],
+             mat['RELEASE']['act'][0, 0])):
+
 
         img_fn = anno['image']['name'][0, 0][0]
         train_flag = int(train_flag)
+
+        if len(act['act_name']) > 0:
+            act_name = act['act_name'][0]
+        if len(act_name) > 0:
+            act_name = act_name[0]
+        else:
+            act_name = ""
+
+        if len(act['cat_name']) > 0:
+            cat_name = act['cat_name'][0]
+        if len(cat_name) > 0:
+            cat_name = cat_name[0]
+        else:
+            cat_name = ""
+
+        if len(act['act_id']) > 0:
+            act_id = act['act_id'][0]
+        if len(act_id) > 0:
+            act_id = int(act_id[0][0])
+        else:
+            act_id = ""
+
 
         if 'annopoints' in str(anno['annorect'].dtype):
             annopoints = anno['annorect']['annopoints'][0]
@@ -82,12 +108,14 @@ def save_joints():
                     if len(joint_pos) == 16:
                         data = {
                             'filename': img_fn,
-                            'train': train_flag,
-                            'head_rect': head_rect,
-                            'is_visible': vis,
-                            'joint_pos': joint_pos
+                            # 'train': train_flag,
+                            # 'head_rect': head_rect,
+                            # 'is_visible': vis,
+                            # 'joint_pos': joint_pos,
+                            'act_name': act_name,
+                            'cat_name': cat_name,
+                            'act_id': act_id
                         }
-
                         print(json.dumps(data), file=fp)
 
 
@@ -107,10 +135,23 @@ def write_line(datum, fp):
 
     print(out, file=fp)
 
+def write_line_act(datum, fp):
+    """
+    Write a line in format:
+      image_name, act_name, cat_name, act_id
+    """
+    out = [datum['filename']]
+    out.append(datum['act_name'])
+    out.append(datum['cat_name'])
+    out.append(datum['act_id'])
+    out = [str(o) for o in out]
+    out = '###'.join(out)
+
+    print(out, file=fp)
 
 def split_train_test():
-    fp_test = open(os.path.join(MPII_OUT_DIR, 'test_joints.csv'), 'w')
-    fp_train = open(os.path.join(MPII_OUT_DIR, 'train_joints.csv'), 'w')
+    fp_test = open(os.path.join(MPII_OUT_DIR, 'test_joints.txt'), 'w')
+    fp_train = open(os.path.join(MPII_OUT_DIR, 'train_joints.txt'), 'w')
     all_data = open(os.path.join(MPII_OUT_DIR, 'data.json')).readlines()
     N = len(all_data)
     N_test = int(N * 0.1)
@@ -130,11 +171,11 @@ def split_train_test():
 
     for i in train_indices:
         datum = json.loads(all_data[i].strip())
-        write_line(datum, fp_train)
+        write_line_act(datum, fp_train)
 
     for i in test_indices:
         datum = json.loads(all_data[i].strip())
-        write_line(datum, fp_test)
+        write_line_act(datum, fp_test)
 
 
 if __name__ == '__main__':
